@@ -1,0 +1,37 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace TestTask.Migrations
+{
+    /// <inheritdoc />
+    public partial class UpdateAccountAndIncidentEntities : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropIndex(
+                name: "IX_Incidents_AccountId",
+                table: "Incidents");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Incidents_AccountId",
+                table: "Incidents",
+                column: "AccountId");
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropIndex(
+                name: "IX_Incidents_AccountId",
+                table: "Incidents");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Incidents_AccountId",
+                table: "Incidents",
+                column: "AccountId",
+                unique: true);
+        }
+    }
+}
