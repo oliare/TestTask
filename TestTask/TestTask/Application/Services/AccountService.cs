@@ -18,21 +18,34 @@ public class AccountService : IAccountService
 
     public async Task<CreateAccountResponseDto> CreateAccountAsync(CreateAccountRequestDto dto, CancellationToken cancellationToken)
     {
-        var contact = await _context.Contacts.FindAsync([dto.ContactId], cancellationToken: cancellationToken) 
+        var contact = await _context.Contacts
+            .FirstOrDefaultAsync(c => c.Id == dto.ContactId, cancellationToken)
             ?? throw new EntityNotFoundException("Contact", dto.ContactId);
 
-        var result = await _context.Accounts.AddAsync(new AccountEntity()
+        if (contact.AccountId != null)
+            throw new Exception("Contact is already linked to an account");
+
+        var accountExists = await _context.Accounts
+            .AnyAsync(a => a.Name == dto.Name, cancellationToken);
+
+        if (accountExists)
+            throw new Exception($"Account with name '{dto.Name}' already exists");
+
+        var account = new AccountEntity
         {
-            Name = dto.Name,
-            Contacts = [contact]
-        }, cancellationToken);
-        
+            Name = dto.Name
+        };
+
+        _context.Accounts.Add(account);
+
+        contact.Account = account;
+
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CreateAccountResponseDto()
+        return new CreateAccountResponseDto
         {
-            Name = result.Entity.Name,
-            Id = result.Entity.Id
+            Id = account.Id,
+            Name = account.Name
         };
     }
 }

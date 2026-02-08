@@ -19,49 +19,47 @@ public class IncidentService : IIncidentService
     public async Task<CreateIncidentResponseDto> CreateIncidentAsync(CreateIncidentRequestDto dto, CancellationToken cancellationToken)
     {
         var account = await _context.Accounts
-            .Include(a => a.Contacts)
-            .Include(a => a.Incident)
             .FirstOrDefaultAsync(a => a.Name == dto.AccountName, cancellationToken)
             ?? throw new EntityNotFoundException("Account", dto.AccountName);
 
         var contact = await _context.Contacts
-            .Include(x => x.Account)
             .FirstOrDefaultAsync(c => c.Email == dto.ContactEmail, cancellationToken);
 
-        if (contact is not null)
+        if (contact != null)
         {
             contact.FirstName = dto.ContactFirstName;
             contact.LastName = dto.ContactLastName;
-            contact.Email = dto.ContactEmail;
-            contact.Account ??= account;
+
+            if (contact.AccountId == null) 
+                contact.AccountId = account.Id;
         }
         else
         {
-            var contactResult = await _context.Contacts.AddAsync(new ContactEntity
+            contact = new ContactEntity
             {
                 FirstName = dto.ContactFirstName,
                 LastName = dto.ContactLastName,
-                Email = dto.ContactEmail
-            }, cancellationToken);
+                Email = dto.ContactEmail,
+                AccountId = account.Id
+            };
 
-            contact = contactResult.Entity;
-            account.Contacts.Add(contact);
-
+            _context.Contacts.Add(contact);
         }
 
-        var incidentResult = await _context.Incidents.AddAsync(new IncidentEntity()
+        var incident = new IncidentEntity
         {
-            Description = dto.IncidentDescription
-        });
+            Description = dto.IncidentDescription,
+            AccountId = account.Id
+        };
 
-        account.Incident = incidentResult.Entity;
+        _context.Incidents.Add(incident);
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new CreateIncidentResponseDto()
+        return new CreateIncidentResponseDto
         {
-            IncidentName = incidentResult.Entity.IncidentName,
-            IncidentDescription = incidentResult.Entity.Description,
+            IncidentName = incident.IncidentName,
+            IncidentDescription = incident.Description,
             AccountName = account.Name,
             ContactEmail = contact.Email
         };
